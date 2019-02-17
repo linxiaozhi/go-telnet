@@ -117,6 +117,29 @@ func (c *conn) dial(network, address string) (Connection, error) {
 	return c, nil
 }
 
+func DialTimeout(network, address string, timeout time.Duration) (Connection, error) {
+	fmt.Println("Dialing this: ", address)
+	var t conn
+	return t.dialTimeout(network, address, timeout)
+}
+
+func (c *conn) dialTimeout(network, address string, timeout time.Duration) (Connection, error) {
+	var err error
+	c.Conn, err = net.DialTimeout(network, address, timeout)
+	if err != nil {
+		return nil, err
+	}
+	c.quit = make(chan bool, 1)
+	c.uLock = &sync.Mutex{}
+	c.eLock = &sync.Mutex{}
+	//tcp input
+	c.i = bytes.NewBuffer(nil)
+	//upstream
+	c.u = bytes.NewBuffer(nil)
+	go c.process()
+	return c, nil
+}
+
 // Read the current buffer sent from the server	fprint after being processed
 // for telnet options. This blocks until data is available.
 func (c *conn) Read(b []byte) (n int, err error) {
@@ -276,14 +299,14 @@ func (c *conn) parseCommand(buff []byte) {
 		c.wont(buff)
 	case WILL:
 		c.will(buff)
-	//case SB:
-	//	break
-	//case AYT:
-	//	break
-	//case NOP:
-	//	break
-	//case SE:
-	//	break
+		//case SB:
+		//	break
+		//case AYT:
+		//	break
+		//case NOP:
+		//	break
+		//case SE:
+		//	break
 	default:
 		break
 	}
